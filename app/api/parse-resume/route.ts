@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
         "email": "string",
         "phone": "string",
         "location": "string",
+        "linkedinUrl": "string",
+        "githubUrl": "string",
+        "website": "string",
         "skills": [
           { "name": "string", "proficiency": "beginner" | "intermediate" | "expert" }
         ],

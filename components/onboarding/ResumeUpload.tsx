@@ -16,16 +16,22 @@ export function ResumeUpload({ onUpload, onSkip, onBack, isParsing }: ResumeUplo
     const [file, setFile] = useState<File | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0])
+            const selectedFile = e.target.files[0]
+            setFile(selectedFile)
+            // Automatically upload and parse
+            await onUpload(selectedFile)
         }
     }
 
-    const handleDrop = (e: React.DragEvent) => {
+    const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault()
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            setFile(e.dataTransfer.files[0])
+            const droppedFile = e.dataTransfer.files[0]
+            setFile(droppedFile)
+            // Automatically upload and parse
+            await onUpload(droppedFile)
         }
     }
 

@@ -11,9 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const formSchema = z.object({
     fullName: z.string().min(2, "Name must be at least 2 characters"),
+    username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
     email: z.string().email("Invalid email address"),
     bio: z.string().min(10, "Bio must be at least 10 characters"),
     website: z.string().url("Invalid URL").optional().or(z.literal("")),
+    linkedinUrl: z.string().url("Invalid LinkedIn URL").optional().or(z.literal("")),
+    githubUrl: z.string().url("Invalid GitHub URL").optional().or(z.literal("")),
 })
 
 type BasicInfoFormProps = {
@@ -28,11 +31,34 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: defaultValues || {
             fullName: "",
+            username: "",
             email: "",
             bio: "",
             website: "",
+            linkedinUrl: "",
+            githubUrl: "",
         },
     })
+
+    const checkUsername = async (username: string) => {
+        if (username.length < 3) return
+
+        try {
+            const response = await fetch(`/api/auth/check-username?username=${username}`)
+            const data = await response.json()
+
+            if (!data.available) {
+                form.setError('username', {
+                    type: 'manual',
+                    message: 'Username is already taken'
+                })
+            } else {
+                form.clearErrors('username')
+            }
+        } catch (error) {
+            console.error('Error checking username:', error)
+        }
+    }
 
     return (
         <Card className="glass border-none text-white">
@@ -50,6 +76,27 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
                                     <FormLabel className="text-muted-foreground">Full Name</FormLabel>
                                     <FormControl>
                                         <Input placeholder="John Doe" {...field} className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="username"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-muted-foreground">Username</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="johndoe"
+                                            {...field}
+                                            className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all"
+                                            onBlur={(e) => {
+                                                field.onBlur()
+                                                checkUsername(e.target.value)
+                                            }}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -89,6 +136,32 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
                                     <FormLabel className="text-muted-foreground">Website / Portfolio (Optional)</FormLabel>
                                     <FormControl>
                                         <Input placeholder="https://example.com" {...field} className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="linkedinUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-muted-foreground">LinkedIn URL (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="https://linkedin.com/in/yourprofile" {...field} className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="githubUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-muted-foreground">GitHub URL (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="https://github.com/yourusername" {...field} className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

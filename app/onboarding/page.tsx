@@ -1,23 +1,76 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { BasicInfoForm } from '@/components/onboarding/BasicInfoForm'
 import { SkillsForm } from '@/components/onboarding/SkillsForm'
 import { ResumeUpload } from '@/components/onboarding/ResumeUpload'
 import { ReviewProfile } from '@/components/onboarding/ReviewProfile'
+import { EmailSent } from '@/components/onboarding/EmailSent'
+import { WelcomeSuccess } from '@/components/onboarding/WelcomeSuccess'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-type OnboardingStep = 'basic-info' | 'skills' | 'resume' | 'review'
+type OnboardingStep = 'basic-info' | 'skills' | 'resume' | 'review' | 'email-sent' | 'welcome'
 
-export default function OnboardingPage() {
+function OnboardingContent() {
     const [step, setStep] = useState<OnboardingStep>('resume')
     const [formData, setFormData] = useState<any>({})
     const [isParsing, setIsParsing] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const router = useRouter()
+    const searchParams = useSearchParams()
     const supabase = createClient()
+
+    // Handle form restoration and query params
+    useEffect(() => {
+        const queryStep = searchParams.get('step')
+        const shouldRestore = searchParams.get('restore')
+
+        // Handle email-sent step navigation
+        if (queryStep === 'email-sent') {
+            setStep('email-sent')
+            return
+        }
+
+        // Handle welcome step navigation
+        if (queryStep === 'welcome') {
+            setStep('welcome')
+            return
+        }
+
+        // Handle form restoration from localStorage
+        if (shouldRestore === 'true') {
+            const restoredData = localStorage.getItem('onboarding_restore')
+            if (restoredData) {
+                try {
+                    const parsed = JSON.parse(restoredData)
+                    setFormData({
+                        basicInfo: {
+                            fullName: parsed.fullName || '',
+                            username: parsed.username || '',
+                            email: parsed.email || '',
+                            bio: parsed.bio || '',
+                            website: parsed.website || '',
+                            linkedinUrl: parsed.linkedinUrl || '',
+                            githubUrl: parsed.githubUrl || '',
+                        },
+                        skills: parsed.skills || [],
+                        resumeUrl: parsed.resumeUrl || null,
+                    })
+                    // Clear the restore data
+                    localStorage.removeItem('onboarding_restore')
+                    // Start from review to let user quickly submit again
+                    setStep('review')
+                    toast('Form Restored', {
+                        description: 'Your previous data has been restored. Please review and submit again.',
+                    })
+                } catch (error) {
+                    console.error('Failed to restore form data:', error)
+                }
+            }
+        }
+    }, [searchParams])
 
     const handleBasicInfoSubmit = (data: any) => {
         setFormData({ ...formData, basicInfo: data })
@@ -33,7 +86,7 @@ export default function OnboardingPage() {
         setIsParsing(true)
         try {
             // Upload file to Supabase Storage
-            let resumePath = null
+            let resumeUrl = null
             try {
                 const fileExt = file.name.split('.').pop()
                 const fileName = `${Math.random()}.${fileExt}`
@@ -42,7 +95,7 @@ export default function OnboardingPage() {
                     .upload(fileName, file)
 
                 if (uploadError) throw uploadError
-                resumePath = uploadData.path
+                resumeUrl = uploadData.path
             } catch (uploadErr) {
                 console.error('Resume upload failed:', uploadErr)
                 toast("Upload Warning", {
@@ -69,9 +122,12 @@ export default function OnboardingPage() {
             // Map parsed data to form structure
             const prefilledBasicInfo = {
                 fullName: parsedData.fullName || "",
+                username: "", // User must choose a unique username
                 email: parsedData.email || "",
                 bio: parsedData.summary || "",
-                website: "", // Not usually parsed, but could be if added to prompt
+                website: parsedData.website || "", // Can be parsed from resume
+                linkedinUrl: parsedData.linkedinUrl || "", // Can be parsed from resume
+                githubUrl: parsedData.githubUrl || "", // Can be parsed from resume
             }
 
             // Handle skills - they might be strings or objects with name/proficiency
@@ -90,7 +146,7 @@ export default function OnboardingPage() {
                 basicInfo: prefilledBasicInfo,
                 skills: prefilledSkills,
                 resumeData: parsedData,
-                resumePath
+                resumeUrl
             }))
 
             toast("Resume Parsed", {
@@ -115,59 +171,48 @@ export default function OnboardingPage() {
     const handleFinalSubmit = async () => {
         setIsSubmitting(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-
-            if (!user) {
-                toast("Authentication Required", {
-                    description: "Please sign in to save your profile.",
-                })
-                return
-            }
-
-            // Save to profiles table
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: user.id,
-                    full_name: formData.basicInfo.fullName,
+            // Send magic link email
+            const response = await fetch('/api/auth/send-magic-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     email: formData.basicInfo.email,
+                    username: formData.basicInfo.username,
+                    fullName: formData.basicInfo.fullName,
                     bio: formData.basicInfo.bio,
                     website: formData.basicInfo.website,
-                    resume_url: formData.resumePath,
-                    role: 'contributor',
-                    updated_at: new Date().toISOString(),
-                })
-
-            if (profileError) throw profileError
-
-            // Save skills
-            if (formData.skills?.length > 0) {
-                const skillsToInsert = formData.skills.map((s: any) => ({
-                    user_id: user.id,
-                    skill_name: s.name,
-                    proficiency: s.proficiency
-                }))
-
-                const { error: skillsError } = await supabase
-                    .from('skills')
-                    .insert(skillsToInsert)
-
-                if (skillsError) throw skillsError
-            }
-
-            toast("Profile Created", {
-                description: "Welcome to AIQD! Your profile has been set up.",
+                    linkedinUrl: formData.basicInfo.linkedinUrl,
+                    githubUrl: formData.basicInfo.githubUrl,
+                    skills: formData.skills,
+                    resumeUrl: formData.resumeUrl,
+                }),
             })
 
-            router.push('/dashboard')
+            if (!response.ok) {
+                throw new Error('Failed to send verification email')
+            }
+
+            // Store email in localStorage for EmailSent component
+            localStorage.setItem('pending_email', formData.basicInfo.email)
+
+            toast("Email Sent", {
+                description: "Check your inbox for the verification link.",
+            })
+
+            // Show email sent confirmation
+            setStep('email-sent')
         } catch (error) {
             console.error(error)
             toast("Error", {
-                description: "Failed to save profile. Please try again.",
+                description: "Failed to send verification email. Please try again.",
             })
         } finally {
             setIsSubmitting(false)
         }
+    }
+
+    const handleResendEmail = async () => {
+        return handleFinalSubmit()
     }
 
     return (
@@ -237,7 +282,30 @@ export default function OnboardingPage() {
                         isSubmitting={isSubmitting}
                     />
                 )}
+
+                {step === 'email-sent' && (
+                    <EmailSent
+                        email={formData.basicInfo?.email || ''}
+                        onResend={handleResendEmail}
+                    />
+                )}
+
+                {step === 'welcome' && (
+                    <WelcomeSuccess />
+                )}
             </div>
         </div>
+    )
+}
+
+export default function OnboardingPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="text-primary">Loading...</div>
+            </div>
+        }>
+            <OnboardingContent />
+        </Suspense>
     )
 }
