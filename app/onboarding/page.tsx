@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 type OnboardingStep = 'basic-info' | 'skills' | 'resume' | 'review'
 
 export default function OnboardingPage() {
-    const [step, setStep] = useState<OnboardingStep>('basic-info')
+    const [step, setStep] = useState<OnboardingStep>('resume')
     const [formData, setFormData] = useState<any>({})
     const [isParsing, setIsParsing] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -26,7 +26,7 @@ export default function OnboardingPage() {
 
     const handleSkillsSubmit = (skills: any[]) => {
         setFormData({ ...formData, skills })
-        setStep('resume')
+        setStep('review')
     }
 
     const handleResumeUpload = async (file: File) => {
@@ -51,12 +51,12 @@ export default function OnboardingPage() {
             }
 
             // Call parse API
-            const formData = new FormData()
-            formData.append('file', file)
+            const formDataPayload = new FormData()
+            formDataPayload.append('file', file)
 
             const response = await fetch('/api/parse-resume', {
                 method: 'POST',
-                body: formData,
+                body: formDataPayload,
             })
 
             if (!response.ok) {
@@ -66,17 +66,38 @@ export default function OnboardingPage() {
 
             const parsedData = await response.json()
 
+            // Map parsed data to form structure
+            const prefilledBasicInfo = {
+                fullName: parsedData.fullName || "",
+                email: parsedData.email || "",
+                bio: parsedData.summary || "",
+                website: "", // Not usually parsed, but could be if added to prompt
+            }
+
+            // Handle skills - they might be strings or objects with name/proficiency
+            const prefilledSkills = parsedData.skills?.map((skill: any) => {
+                if (typeof skill === 'string') {
+                    return { name: skill, proficiency: 'intermediate' as const }
+                }
+                return {
+                    name: skill.name || skill,
+                    proficiency: skill.proficiency || 'intermediate' as const
+                }
+            }) || []
+
             setFormData((prev: any) => ({
                 ...prev,
+                basicInfo: prefilledBasicInfo,
+                skills: prefilledSkills,
                 resumeData: parsedData,
                 resumePath
             }))
 
             toast("Resume Parsed", {
-                description: "We've extracted details from your resume.",
+                description: "We've extracted details from your resume. Please review them.",
             })
 
-            setStep('review')
+            setStep('basic-info')
         } catch (error) {
             console.error(error)
             toast("Error", {
@@ -88,7 +109,7 @@ export default function OnboardingPage() {
     }
 
     const handleSkipResume = () => {
-        setStep('review')
+        setStep('basic-info')
     }
 
     const handleFinalSubmit = async () => {
@@ -97,11 +118,6 @@ export default function OnboardingPage() {
             const { data: { user } } = await supabase.auth.getUser()
 
             if (!user) {
-                // If no user, maybe redirect to login or handle anonymous?
-                // For Phase 1, we assume they logged in via Google before this or we create a user here?
-                // The flow says "Google Login" is step 1.
-                // If they are not logged in, we should probably redirect to login.
-                // But for now, let's assume they are or we'll handle it.
                 toast("Authentication Required", {
                     description: "Please sign in to save your profile.",
                 })
@@ -114,7 +130,7 @@ export default function OnboardingPage() {
                 .upsert({
                     id: user.id,
                     full_name: formData.basicInfo.fullName,
-                    email: formData.basicInfo.email, // Should probably match auth email
+                    email: formData.basicInfo.email,
                     bio: formData.basicInfo.bio,
                     website: formData.basicInfo.website,
                     resume_url: formData.resumePath,
@@ -143,7 +159,7 @@ export default function OnboardingPage() {
                 description: "Welcome to AIQD! Your profile has been set up.",
             })
 
-            router.push('/dashboard') // Or wherever they go next
+            router.push('/dashboard')
         } catch (error) {
             console.error(error)
             toast("Error", {
@@ -155,28 +171,48 @@ export default function OnboardingPage() {
     }
 
     return (
-        <div className="min-h-screen bg-black py-12 px-4">
-            <div className="container mx-auto max-w-2xl">
+        <div className="min-h-screen bg-black py-12 px-4 relative overflow-hidden">
+            {/* Background Elements */}
+            <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-1000" />
+
+            <div className="container mx-auto max-w-2xl relative z-10">
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold text-white mb-2">Join as Contributor</h1>
+                    <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent text-glow">
+                        Join as Contributor
+                    </h1>
+                    <p className="text-muted-foreground mb-8">
+                        Start your journey by uploading your resume.
+                    </p>
+
                     <div className="flex justify-center space-x-2">
-                        {['Basic Info', 'Skills', 'Resume', 'Review'].map((s, i) => {
-                            const stepIndex = ['basic-info', 'skills', 'resume', 'review'].indexOf(step)
+                        {['Resume', 'Basic Info', 'Skills', 'Review'].map((s, i) => {
+                            const stepOrder = ['resume', 'basic-info', 'skills', 'review']
+                            const stepIndex = stepOrder.indexOf(step)
                             const isActive = i === stepIndex
                             const isCompleted = i < stepIndex
 
                             return (
                                 <div key={s} className="flex items-center">
                                     <div className={`
-                    w-3 h-3 rounded-full 
-                    ${isActive ? 'bg-blue-500' : isCompleted ? 'bg-green-500' : 'bg-gray-700'}
+                    w-3 h-3 rounded-full transition-all duration-300
+                    ${isActive ? 'bg-primary shadow-[0_0_10px_var(--primary)] scale-125' : isCompleted ? 'bg-primary/50' : 'bg-white/10'}
                   `} />
-                                    {i < 3 && <div className={`w-12 h-0.5 mx-1 ${isCompleted ? 'bg-green-500' : 'bg-gray-700'}`} />}
+                                    {i < 3 && <div className={`w-12 h-0.5 mx-1 transition-all duration-300 ${isCompleted ? 'bg-primary/50' : 'bg-white/10'}`} />}
                                 </div>
                             )
                         })}
                     </div>
                 </div>
+
+                {step === 'resume' && (
+                    <ResumeUpload
+                        onUpload={handleResumeUpload}
+                        onSkip={handleSkipResume}
+                        onBack={() => { }} // No back from first step
+                        isParsing={isParsing}
+                    />
+                )}
 
                 {step === 'basic-info' && (
                     <BasicInfoForm
@@ -193,20 +229,11 @@ export default function OnboardingPage() {
                     />
                 )}
 
-                {step === 'resume' && (
-                    <ResumeUpload
-                        onUpload={handleResumeUpload}
-                        onSkip={handleSkipResume}
-                        onBack={() => setStep('skills')}
-                        isParsing={isParsing}
-                    />
-                )}
-
                 {step === 'review' && (
                     <ReviewProfile
                         data={formData}
                         onSubmit={handleFinalSubmit}
-                        onBack={() => setStep('resume')}
+                        onBack={() => setStep('skills')}
                         isSubmitting={isSubmitting}
                     />
                 )}

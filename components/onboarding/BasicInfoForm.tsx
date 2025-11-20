@@ -35,9 +35,9 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
     })
 
     return (
-        <Card className="bg-white/5 border-white/10 text-white">
+        <Card className="glass border-none text-white">
             <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
+                <CardTitle className="text-2xl font-bold text-center">Basic Information</CardTitle>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
@@ -47,9 +47,9 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
                             name="fullName"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Full Name</FormLabel>
+                                    <FormLabel className="text-muted-foreground">Full Name</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="John Doe" {...field} className="bg-black/20 border-white/10" />
+                                        <Input placeholder="John Doe" {...field} className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -60,9 +60,9 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Email</FormLabel>
+                                    <FormLabel className="text-muted-foreground">Email</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="john@example.com" {...field} className="bg-black/20 border-white/10" />
+                                        <Input placeholder="john@example.com" {...field} className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -73,9 +73,9 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
                             name="bio"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Bio</FormLabel>
+                                    <FormLabel className="text-muted-foreground">Bio</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Tell us about yourself..." {...field} className="bg-black/20 border-white/10 min-h-[100px]" />
+                                        <Textarea placeholder="Tell us about yourself..." {...field} className="bg-black/40 border-white/10 min-h-[100px] focus:border-primary/50 focus:ring-primary/20 transition-all" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -86,15 +86,17 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
                             name="website"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Website / Portfolio (Optional)</FormLabel>
+                                    <FormLabel className="text-muted-foreground">Website / Portfolio (Optional)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="https://example.com" {...field} className="bg-black/20 border-white/10" />
+                                        <Input placeholder="https://example.com" {...field} className="bg-black/40 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full">Next Step</Button>
+                        <Button type="submit" className="w-full bg-primary text-black hover:bg-primary/90 shadow-[0_0_15px_rgba(0,255,163,0.3)] hover:shadow-[0_0_25px_rgba(0,255,163,0.5)] transition-all">
+                            Next Step
+                        </Button>
                     </form>
                 </Form>
             </CardContent>
