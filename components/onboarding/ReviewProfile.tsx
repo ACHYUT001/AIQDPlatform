@@ -1,5 +1,5 @@
-'use client'
-
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,30 @@ type ReviewProfileProps = {
 }
 
 export function ReviewProfile({ data, onSubmit, onBack, isSubmitting }: ReviewProfileProps) {
+    const handleGoogleLogin = async () => {
+        try {
+            // 1. Save form data to localStorage
+            localStorage.setItem('google_onboarding_data', JSON.stringify(data))
+
+            // 2. Trigger OAuth
+            const supabase = createClient()
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            })
+
+            if (error) {
+                toast.error('Failed to initiate Google Login')
+                console.error(error)
+            }
+        } catch (error) {
+            console.error('Google login error:', error)
+            toast.error('An error occurred')
+        }
+    }
+
     return (
         <Card className="glass border-none text-white">
             <CardHeader>
@@ -109,6 +133,7 @@ export function ReviewProfile({ data, onSubmit, onBack, isSubmitting }: ReviewPr
                     variant="outline"
                     className="w-full border-white/10 hover:bg-white/5 hover:border-primary/30 transition-all"
                     disabled={isSubmitting}
+                    onClick={handleGoogleLogin}
                 >
                     <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

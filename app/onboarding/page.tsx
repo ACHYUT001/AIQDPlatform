@@ -39,6 +39,52 @@ function OnboardingContent() {
             return
         }
 
+        // Handle Google OAuth Sync
+        if (queryStep === 'google-sync') {
+            const syncGoogleProfile = async () => {
+                try {
+                    setIsSubmitting(true)
+                    const storedData = localStorage.getItem('google_onboarding_data')
+
+                    if (!storedData) {
+                        toast.error('No onboarding data found')
+                        setStep('review') // Fallback
+                        return
+                    }
+
+                    const parsedData = JSON.parse(storedData)
+
+                    // Call API to complete profile
+                    const response = await fetch('/api/auth/complete-profile-google', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(parsedData),
+                    })
+
+                    const result = await response.json()
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Failed to create profile')
+                    }
+
+                    // Success! Clear storage and go to welcome
+                    localStorage.removeItem('google_onboarding_data')
+                    setStep('welcome')
+                    toast.success('Profile created successfully!')
+
+                } catch (error: any) {
+                    console.error('Google sync error:', error)
+                    toast.error(error.message || 'Failed to sync profile')
+                    setStep('review') // Go back to review on error
+                } finally {
+                    setIsSubmitting(false)
+                }
+            }
+
+            syncGoogleProfile()
+            return // Prevent further processing of other steps if google-sync is active
+        }
+
         // Handle form restoration from localStorage
         if (shouldRestore === 'true') {
             const restoredData = localStorage.getItem('onboarding_restore')
