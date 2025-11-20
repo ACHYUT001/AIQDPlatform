@@ -226,9 +226,6 @@ function OnboardingContent() {
                     <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent text-glow">
                         Join as Contributor
                     </h1>
-                    <p className="text-muted-foreground mb-8">
-                        Start your journey by uploading your resume.
-                    </p>
 
                     <div className="flex justify-center space-x-2">
                         {['Resume', 'Basic Info', 'Skills', 'Review'].map((s, i) => {

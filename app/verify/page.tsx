@@ -119,11 +119,15 @@ function VerifyContent() {
                     <CardTitle className="text-2xl font-bold">
                         {status === 'verifying' && 'Verifying Email'}
                         {status === 'success' && 'Welcome to AIQD!'}
-                        {status === 'error' && 'Verification Failed'}
+                        {status === 'error' && (message.includes('expired') ? 'Link Expired' : 'Verification Failed')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="text-center space-y-4">
-                    <p className="text-muted-foreground">{message}</p>
+                    <p className="text-muted-foreground">
+                        {message.includes('expired')
+                            ? "For your security, verification links are valid for a limited time. Don't worry, you can pick up right where you left off."
+                            : message}
+                    </p>
 
                     {status === 'error' && (
                         <Button

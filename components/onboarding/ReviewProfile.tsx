@@ -25,23 +25,41 @@ export function ReviewProfile({ data, onSubmit, onBack, isSubmitting }: ReviewPr
 
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold border-b border-white/10 pb-2 text-primary">Basic Info</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div>
                             <span className="text-muted-foreground block">Full Name</span>
                             <span>{data.basicInfo?.fullName}</span>
                         </div>
                         <div>
-                            <span className="text-muted-foreground block">Email</span>
-                            <span>{data.basicInfo?.email}</span>
+                            <span className="text-muted-foreground block">Username</span>
+                            <span>@{data.basicInfo?.username}</span>
                         </div>
-                        <div className="col-span-2">
+                        <div>
+                            <span className="text-muted-foreground block">Email</span>
+                            <span className="break-all">{data.basicInfo?.email}</span>
+                        </div>
+                        <div className="col-span-1 md:col-span-3">
                             <span className="text-muted-foreground block">Bio</span>
-                            <span>{data.basicInfo?.bio}</span>
+                            <div className="max-h-[100px] overflow-y-auto pr-2 custom-scrollbar">
+                                <span className="whitespace-pre-wrap">{data.basicInfo?.bio}</span>
+                            </div>
                         </div>
                         {data.basicInfo?.website && (
-                            <div className="col-span-2">
+                            <div className="col-span-1 md:col-span-3">
                                 <span className="text-muted-foreground block">Website</span>
-                                <span className="text-blue-400 hover:underline cursor-pointer">{data.basicInfo?.website}</span>
+                                <span className="text-blue-400 hover:underline cursor-pointer break-all">{data.basicInfo?.website}</span>
+                            </div>
+                        )}
+                        {data.basicInfo?.linkedinUrl && (
+                            <div className="col-span-1 md:col-span-3">
+                                <span className="text-muted-foreground block">LinkedIn</span>
+                                <span className="text-blue-400 hover:underline cursor-pointer break-all">{data.basicInfo?.linkedinUrl}</span>
+                            </div>
+                        )}
+                        {data.basicInfo?.githubUrl && (
+                            <div className="col-span-1 md:col-span-3">
+                                <span className="text-muted-foreground block">GitHub</span>
+                                <span className="text-blue-400 hover:underline cursor-pointer break-all">{data.basicInfo?.githubUrl}</span>
                             </div>
                         )}
                     </div>
@@ -49,7 +67,7 @@ export function ReviewProfile({ data, onSubmit, onBack, isSubmitting }: ReviewPr
 
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold border-b border-white/10 pb-2 text-primary">Skills</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
                         {data.skills?.map((skill: any) => (
                             <Badge key={skill.name} variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                                 {skill.name} ({skill.proficiency})

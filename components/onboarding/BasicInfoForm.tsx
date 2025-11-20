@@ -13,7 +13,7 @@ const formSchema = z.object({
     fullName: z.string().min(2, "Name must be at least 2 characters"),
     username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
     email: z.string().email("Invalid email address"),
-    bio: z.string().min(10, "Bio must be at least 10 characters"),
+    bio: z.string().min(10, "Bio must be at least 10 characters").max(500, "Bio must not exceed 500 characters"),
     website: z.string().url("Invalid URL").optional().or(z.literal("")),
     linkedinUrl: z.string().url("Invalid LinkedIn URL").optional().or(z.literal("")),
     githubUrl: z.string().url("Invalid GitHub URL").optional().or(z.literal("")),
@@ -122,7 +122,17 @@ export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
                                 <FormItem>
                                     <FormLabel className="text-muted-foreground">Bio</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Tell us about yourself..." {...field} className="bg-black/40 border-white/10 min-h-[100px] focus:border-primary/50 focus:ring-primary/20 transition-all" />
+                                        <div className="relative">
+                                            <Textarea
+                                                placeholder="Tell us about yourself..."
+                                                {...field}
+                                                className="bg-black/40 border-white/10 min-h-[100px] focus:border-primary/50 focus:ring-primary/20 transition-all pr-2 pb-6"
+                                                maxLength={500}
+                                            />
+                                            <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                                                {field.value?.length || 0}/500
+                                            </div>
+                                        </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
