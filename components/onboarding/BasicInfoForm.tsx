@@ -21,8 +21,10 @@ type BasicInfoFormProps = {
     onSubmit: (data: z.infer<typeof formSchema>) => void
 }
 
+type FormSchemaType = z.infer<typeof formSchema>;
+
 export function BasicInfoForm({ defaultValues, onSubmit }: BasicInfoFormProps) {
-    const form = useForm<z.infer<typeof formSchema>>({
+    const form = useForm<FormSchemaType>({
         resolver: zodResolver(formSchema),
         defaultValues: defaultValues || {
             fullName: "",

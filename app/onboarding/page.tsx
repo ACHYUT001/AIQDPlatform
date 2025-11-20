@@ -7,7 +7,7 @@ import { SkillsForm } from '@/components/onboarding/SkillsForm'
 import { ResumeUpload } from '@/components/onboarding/ResumeUpload'
 import { ReviewProfile } from '@/components/onboarding/ReviewProfile'
 import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 
 type OnboardingStep = 'basic-info' | 'skills' | 'resume' | 'review'
 
@@ -17,7 +17,6 @@ export default function OnboardingPage() {
     const [isParsing, setIsParsing] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const router = useRouter()
-    const { toast } = useToast()
     const supabase = createClient()
 
     const handleBasicInfoSubmit = (data: any) => {
@@ -59,24 +58,22 @@ export default function OnboardingPage() {
 
             const parsedData = await response.json()
 
-            setFormData(prev => ({
+            setFormData((prev: any) => ({
                 ...prev,
                 resumeData: parsedData,
                 resumePath
             }))
 
-            toast({
-                title: "Resume Parsed",
+            toast("Resume Parsed", {
                 description: "We've extracted details from your resume.",
             })
 
             setStep('review')
         } catch (error) {
             console.error(error)
-            toast({
-                title: "Error",
+            toast("Error", {
                 description: "Failed to upload or parse resume. Please try again.",
-                variant: "destructive",
+                // variant: "destructive" is not directly supported by sonner in the same way, usually toast.error
             })
         } finally {
             setIsParsing(false)
@@ -98,10 +95,8 @@ export default function OnboardingPage() {
                 // The flow says "Google Login" is step 1.
                 // If they are not logged in, we should probably redirect to login.
                 // But for now, let's assume they are or we'll handle it.
-                toast({
-                    title: "Authentication Required",
+                toast("Authentication Required", {
                     description: "Please sign in to save your profile.",
-                    variant: "destructive"
                 })
                 return
             }
@@ -137,18 +132,15 @@ export default function OnboardingPage() {
                 if (skillsError) throw skillsError
             }
 
-            toast({
-                title: "Profile Created",
+            toast("Profile Created", {
                 description: "Welcome to AIQD! Your profile has been set up.",
             })
 
             router.push('/dashboard') // Or wherever they go next
         } catch (error) {
             console.error(error)
-            toast({
-                title: "Error",
+            toast("Error", {
                 description: "Failed to save profile. Please try again.",
-                variant: "destructive",
             })
         } finally {
             setIsSubmitting(false)
