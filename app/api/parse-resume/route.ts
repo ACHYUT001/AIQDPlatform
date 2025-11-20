@@ -13,30 +13,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // Convert file to buffer
+    // Convert file to base64 for Gemini
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-
-    // Parse PDF text
-    let text = ''
-    try {
-      // @ts-ignore
-      const pdfParse = require('pdf-parse')
-      const pdfData = await pdfParse(buffer)
-      text = pdfData.text
-    } catch (error) {
-      console.error('PDF Parse Error:', error)
-      return NextResponse.json({ error: 'Failed to parse PDF' }, { status: 500 })
-    }
+    const base64Data = buffer.toString('base64')
 
     // Call Gemini to extract structured data
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    // Using gemini-2.0-flash as 1.5 is not available in this environment
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
     const prompt = `
-      You are an expert resume parser. Extract the following information from the resume text below and return it as a valid JSON object.
-      
-      Resume Text:
-      ${text.substring(0, 30000)} // Limit text length if needed
+      You are an expert resume parser. Extract the following information from the resume document provided and return it as a valid JSON object.
 
       Required JSON Structure:
       {
@@ -70,7 +57,16 @@ export async function POST(req: NextRequest) {
       Return ONLY the JSON object, no markdown formatting.
     `
 
-    const result = await model.generateContent(prompt)
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: base64Data,
+          mimeType: 'application/pdf',
+        },
+      },
+    ])
+
     const response = await result.response
     const textResponse = response.text()
 
@@ -80,8 +76,9 @@ export async function POST(req: NextRequest) {
     const parsedData = JSON.parse(jsonString)
 
     return NextResponse.json(parsedData)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Resume Parsing Error:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : JSON.stringify(error)
+    return NextResponse.json({ error: `Internal Server Error: ${errorMessage}` }, { status: 500 })
   }
 }

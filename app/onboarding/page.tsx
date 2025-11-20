@@ -33,17 +33,22 @@ export default function OnboardingPage() {
         setIsParsing(true)
         try {
             // Upload file to Supabase Storage
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${Math.random()}.${fileExt}`
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('resumes')
-                .upload(fileName, file)
+            let resumePath = null
+            try {
+                const fileExt = file.name.split('.').pop()
+                const fileName = `${Math.random()}.${fileExt}`
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('resumes')
+                    .upload(fileName, file)
 
-            if (uploadError) throw uploadError
-
-            // Get public URL (or signed URL)
-            // For now, we'll just store the path
-            const resumePath = uploadData.path
+                if (uploadError) throw uploadError
+                resumePath = uploadData.path
+            } catch (uploadErr) {
+                console.error('Resume upload failed:', uploadErr)
+                toast("Upload Warning", {
+                    description: "Could not save PDF file, but proceeding with parsing.",
+                })
+            }
 
             // Call parse API
             const formData = new FormData()
@@ -54,7 +59,10 @@ export default function OnboardingPage() {
                 body: formData,
             })
 
-            if (!response.ok) throw new Error('Failed to parse resume')
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Failed to parse resume')
+            }
 
             const parsedData = await response.json()
 
@@ -72,8 +80,7 @@ export default function OnboardingPage() {
         } catch (error) {
             console.error(error)
             toast("Error", {
-                description: "Failed to upload or parse resume. Please try again.",
-                // variant: "destructive" is not directly supported by sonner in the same way, usually toast.error
+                description: (error as Error).message || "Failed to upload or parse resume. Please try again.",
             })
         } finally {
             setIsParsing(false)
