@@ -27,11 +27,11 @@ export function Header() {
                 </nav>
 
                 <div className="hidden md:flex items-center space-x-4">
-                    <Link href="/login">
-                        <Button variant="ghost" className="text-muted-foreground hover:text-white hover:bg-white/5">
-                            Sign In
-                        </Button>
-                    </Link>
+                    {/* <Link href="/login">
+                    <Button variant="ghost" className="text-muted-foreground hover:text-white hover:bg-white/5 cursor-not-allowed opacity-50" disabled>
+                        Sign In
+                    </Button>
+                    </Link> */}
                     <Link href="/onboarding">
                         <Button className="bg-primary text-black hover:bg-primary/90 shadow-[0_0_15px_rgba(0,255,163,0.3)] hover:shadow-[0_0_25px_rgba(0,255,163,0.5)] transition-all">
                             Join as Contributor
@@ -58,11 +58,11 @@ export function Header() {
                                 Contact
                             </Link>
                             <div className="h-px bg-white/10" />
-                            <Link href="/login">
-                                <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-white hover:bg-white/5">
-                                    Sign In
-                                </Button>
-                            </Link>
+                            {/* <Link href="/login"> */}
+                            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-white hover:bg-white/5 cursor-not-allowed opacity-50" disabled>
+                                Sign In
+                            </Button>
+                            {/* </Link> */}
                             <Link href="/onboarding">
                                 <Button className="w-full bg-primary text-black hover:bg-primary/90">
                                     Join as Contributor

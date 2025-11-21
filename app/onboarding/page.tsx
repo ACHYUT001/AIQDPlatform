@@ -11,16 +11,25 @@ import { WelcomeSuccess } from '@/components/onboarding/WelcomeSuccess'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
+import { Loader2 } from 'lucide-react'
+
 type OnboardingStep = 'basic-info' | 'skills' | 'resume' | 'review' | 'email-sent' | 'welcome'
 
 function OnboardingContent() {
-    const [step, setStep] = useState<OnboardingStep>('resume')
-    const [formData, setFormData] = useState<any>({})
-    const [isParsing, setIsParsing] = useState(false)
-    const [isSubmitting, setIsSubmitting] = useState(false)
     const router = useRouter()
     const searchParams = useSearchParams()
     const supabase = createClient()
+
+    const [step, setStep] = useState<OnboardingStep>(() => {
+        if (searchParams.get('step') === 'email-sent') return 'email-sent'
+        if (searchParams.get('step') === 'welcome') return 'welcome'
+        return 'resume'
+    })
+    const [formData, setFormData] = useState<any>({})
+    const [isParsing, setIsParsing] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    // Add loading state for data restoration to prevent flash of empty content
+    const [isRestoring, setIsRestoring] = useState(false)
 
     // Handle form restoration and query params
     useEffect(() => {
@@ -39,51 +48,7 @@ function OnboardingContent() {
             return
         }
 
-        // Handle Google OAuth Sync
-        if (queryStep === 'google-sync') {
-            const syncGoogleProfile = async () => {
-                try {
-                    setIsSubmitting(true)
-                    const storedData = localStorage.getItem('google_onboarding_data')
 
-                    if (!storedData) {
-                        toast.error('No onboarding data found')
-                        setStep('review') // Fallback
-                        return
-                    }
-
-                    const parsedData = JSON.parse(storedData)
-
-                    // Call API to complete profile
-                    const response = await fetch('/api/auth/complete-profile-google', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(parsedData),
-                    })
-
-                    const result = await response.json()
-
-                    if (!response.ok) {
-                        throw new Error(result.error || 'Failed to create profile')
-                    }
-
-                    // Success! Clear storage and go to welcome
-                    localStorage.removeItem('google_onboarding_data')
-                    setStep('welcome')
-                    toast.success('Profile created successfully!')
-
-                } catch (error: any) {
-                    console.error('Google sync error:', error)
-                    toast.error(error.message || 'Failed to sync profile')
-                    setStep('review') // Go back to review on error
-                } finally {
-                    setIsSubmitting(false)
-                }
-            }
-
-            syncGoogleProfile()
-            return // Prevent further processing of other steps if google-sync is active
-        }
 
         // Handle form restoration from localStorage
         if (shouldRestore === 'true') {
@@ -117,6 +82,50 @@ function OnboardingContent() {
             }
         }
     }, [searchParams])
+
+    useEffect(() => {
+        const handleAuthCompletion = (e: StorageEvent) => {
+            if (e.key === 'google_auth_completed') {
+                // Clear the flag
+                localStorage.removeItem('google_auth_completed')
+
+                // Trigger sync logic
+                setIsRestoring(true)
+
+                // We need to refresh the session first as the popup handled the auth
+                supabase.auth.refreshSession().then(({ error }) => {
+                    if (!error) {
+                        // Reuse the sync logic but we need to get data from storage first
+                        const storedData = localStorage.getItem('google_onboarding_data')
+                        if (storedData) {
+                            const parsedData = JSON.parse(storedData)
+                            // Call API
+                            fetch('/api/auth/complete-profile-google', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(parsedData),
+                            })
+                                .then(res => res.json())
+                                .then(result => {
+                                    if (result.error) throw new Error(result.error)
+                                    localStorage.removeItem('google_onboarding_data')
+                                    setStep('welcome')
+                                    toast.success('Profile created successfully!')
+                                })
+                                .catch(err => {
+                                    console.error(err)
+                                    toast.error('Failed to sync profile')
+                                })
+                                .finally(() => setIsRestoring(false))
+                        }
+                    }
+                })
+            }
+        }
+
+        window.addEventListener('storage', handleAuthCompletion)
+        return () => window.removeEventListener('storage', handleAuthCompletion)
+    }, [supabase.auth])
 
     const handleBasicInfoSubmit = (data: any) => {
         setFormData({ ...formData, basicInfo: data })
@@ -262,7 +271,7 @@ function OnboardingContent() {
     }
 
     return (
-        <div className="min-h-screen bg-black py-12 px-4 relative overflow-hidden">
+        <div className="min-h-screen bg-black py-12 px-4 relative overflow-x-hidden">
             {/* Background Elements */}
             <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-1000" />
@@ -318,12 +327,21 @@ function OnboardingContent() {
                 )}
 
                 {step === 'review' && (
-                    <ReviewProfile
-                        data={formData}
-                        onSubmit={handleFinalSubmit}
-                        onBack={() => setStep('skills')}
-                        isSubmitting={isSubmitting}
-                    />
+                    isRestoring ? (
+                        <div className="flex flex-col items-center justify-center min-h-[400px] text-primary animate-pulse">
+                            <Loader2 className="h-12 w-12 animate-spin mb-4" />
+                            <p className="text-lg font-medium">Syncing your profile...</p>
+                        </div>
+                    ) : (
+                        <ReviewProfile
+                            data={formData}
+                            onSubmit={handleFinalSubmit}
+                            onBack={() => setStep('skills')}
+                            isSubmitting={isSubmitting}
+                            isGoogleSyncing={isRestoring}
+                            onGoogleLoginStart={() => setIsRestoring(true)}
+                        />
+                    )
                 )}
 
                 {step === 'email-sent' && (
